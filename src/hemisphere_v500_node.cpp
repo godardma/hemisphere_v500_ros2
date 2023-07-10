@@ -248,14 +248,14 @@ int main(int argc, char * argv[])
          << rtkServerIP << ":" << rtkServerPort << endl;
     std::vector<char> rtkBuf(256);
     munu::ClientTCP<> tcp(*service.io_service());
-    cout<<"avant start"<<endl;
+    // cout<<"avant start"<<endl;
     service.start();
-    cout<<"apres start"<<endl;
+    // cout<<"apres start"<<endl;
 
   rclcpp::executors::MultiThreadedExecutor executor;
-  cout<<"ici ok"<<endl;
+//   cout<<"ici ok"<<endl;
   executor.add_node(node);
-  cout<<"ici toujours ok"<<endl;
+//   cout<<"ici toujours ok"<<endl;
   executor.spin();
   service.stop();
   rclcpp::shutdown();
