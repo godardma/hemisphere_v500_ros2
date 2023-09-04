@@ -1,8 +1,6 @@
 # Hemisphere V500 Ros2
 
-Dossier présent sur l'ordi embarqué dans workspaceRos2/src (pas encore en fait)
-
-WORK IN PROGRESS, actuellement une simulation fonctionnelle est proposée
+Package ROS2 permettant la lecture des données fournies par le récepteur GNSS Hemisphere V500
 
 ## Auteur :
 
