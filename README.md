@@ -1,6 +1,6 @@
 # Hemisphere V500 Ros2
 
-Package ROS2 permettant la lecture des données fournies par le récepteur GNSS Hemisphere V500
+Package ROS2 permettant la lecture des données fournies par le récepteur GNSS Hemisphere V500, basé sur les travaux de Pierre NARVOR
 
 ## Auteur :
 
