@@ -140,6 +140,7 @@ void binary3_callback(const Hemisphere* hemisphere,
                       const std::vector<char>& data)
 {
     auto header = reinterpret_cast<const SBinaryMsgHeader*>(data.data());
+
     if(header->blockID != 3) return;
 
     auto msg = hemisphere_v500::to_ros(
@@ -158,8 +159,10 @@ void binary3_callback(const Hemisphere* hemisphere,
     inter.publish(msg);
 }
 
+
 void rtk_callback(munu::ClientTCP<>* tcp,
-                  std::shared_ptr<SerialDevice> serial,
+
+                  hemisphere_gnss::HemisphereReceiver<SerialDevice>* gnss,
                   std::vector<char>* buf,
                   const boost::system::error_code& err,
                   size_t byteCount)
@@ -170,10 +173,13 @@ void rtk_callback(munu::ClientTCP<>* tcp,
         oss << "Got error on rtk correction reception " << err;
         throw std::runtime_error(oss.str());
     }
-    serial->write(buf->size(), buf->data()); // this is synchronous
-    // tcp->async_read(buf->size(), buf->data(),
-    //                 boost::bind(rtk_callback, tcp, serial, buf, _1, _2));
+
+    gnss->device().write(buf->size(), buf->data()); // this is synchronous
+    tcp->async_read(buf->size(), buf->data(),
+
+                    boost::bind(rtk_callback, tcp, gnss, buf, _1, _2));
 }
+
 
 class MinimalPublisher : public rclcpp::Node
 {
@@ -188,27 +194,13 @@ public:
     binary1Pub = this->create_publisher<hemisphere_v500::msg::Binary1>("bin1", 10);
     binary2Pub = this->create_publisher<hemisphere_v500::msg::Binary2>("bin2", 10);
     binary3Pub = this->create_publisher<hemisphere_v500::msg::Binary3>("bin3", 10);
-    // timer_ = this->create_wall_timer(
-    //   500ms, std::bind(&MinimalPublisher::timer_callback, this));
 
 
 
 
   }
 
-  // void timer_callback()
-  // {
-  //   auto message = std_msgs::msg::String();
-  //   message.data = "Hello, world! " + std::to_string(count_++);
-  //   RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-  //   publisher_->publish(message);
-  // }
 
-
-
-
-
-  // rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
   rclcpp::Publisher<hemisphere_v500::msg::StampedString>::SharedPtr nmeaPub;
   rclcpp::Publisher<hemisphere_v500::msg::StampedString>::SharedPtr binaryPub;
@@ -224,7 +216,7 @@ int main(int argc, char * argv[])
   auto node = std::make_shared<MinimalPublisher>();
 
       munu::AsyncService service;
-    string deviceName="/dev/narval_usbl";
+    string deviceName="/dev/ttyAMA1";
     int baudrate = 230400;
     string rtkServerIP="127.0.0.1";
     int rtkServerPort=32898;
@@ -248,14 +240,24 @@ int main(int argc, char * argv[])
          << rtkServerIP << ":" << rtkServerPort << endl;
     std::vector<char> rtkBuf(256);
     munu::ClientTCP<> tcp(*service.io_service());
-    // cout<<"avant start"<<endl;
+    
+    try {
+        tcp.open(rtkServerIP, rtkServerPort);
+        tcp.async_read(rtkBuf.size(), rtkBuf.data(),
+                       boost::bind(rtk_callback, &tcp, &gnss, &rtkBuf, _1, _2));
+
+    }
+    catch(const boost::wrapexcept<boost::system::system_error>& e) {
+        cerr << "============= Connection to RTK server failed. Did you start it ? ===========";
+    }
+
     service.start();
-    // cout<<"apres start"<<endl;
+    
 
   rclcpp::executors::MultiThreadedExecutor executor;
-//   cout<<"ici ok"<<endl;
+
   executor.add_node(node);
-//   cout<<"ici toujours ok"<<endl;
+
   executor.spin();
   service.stop();
   rclcpp::shutdown();
